@@ -1,0 +1,474 @@
+/* Page layout */
+.rdv-details-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 10em auto;
+  padding: 32px;
+  color: #1e293b;
+  background: #f8fafc;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.rdv-details-page * {
+  box-sizing: border-box;
+}
+
+.rdv-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.rdv-details-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 22px;
+}
+
+.rdv-details-back:hover {
+  color: #2563eb;
+}
+
+.rdv-details-eyebrow {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  margin: 0 0 8px;
+}
+
+.rdv-details-header h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.rdv-details-subtitle {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.rdv-details-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.rdv-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 17px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.rdv-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rdv-btn-primary {
+  color: #fff;
+  background: #2563eb;
+}
+
+.rdv-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.rdv-btn-secondary {
+  color: #334155;
+  background: #fff;
+  border-color: #e2e8f0;
+}
+
+.rdv-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.rdv-btn-danger {
+  color: #dc2626;
+  background: #fff;
+  border-color: #fecaca;
+}
+
+.rdv-btn-danger:hover {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Main content grid */
+.rdv-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.rdv-details-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rdv-details-card {
+  min-width: 0;
+  padding: 25px;
+  background: #fff;
+  border: 1px solid #e8edf4;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgb(15 23 42 / 3%);
+}
+
+.rdv-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 22px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.rdv-card-heading h2,
+.rdv-metadata-card h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.rdv-card-heading p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rdv-card-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 43px;
+  color: #2563eb;
+  background: #eff6ff;
+  border-radius: 12px;
+  font-size: 23px;
+}
+
+.rdv-client-icon {
+  color: #0f766e;
+  background: #f0fdfa;
+}
+
+.rdv-user-icon {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+
+/* Detail rows */
+.rdv-detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 17px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rdv-detail-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.rdv-detail-label {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rdv-detail-value {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rdv-detail-notes {
+  width: 100%;
+  margin: 0;
+  padding: 14px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Status badges */
+.rdv-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rdv-status-dot {
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.rdv-status-scheduled {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.rdv-status-confirmed {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.rdv-status-completed {
+  color: #6d28d9;
+  background: #f5f3ff;
+}
+
+.rdv-status-cancelled {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+/* Client and booking user profiles */
+.rdv-profile {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 20px 0 15px;
+}
+
+.rdv-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 50%;
+  font-size: 19px;
+  font-weight: 750;
+}
+
+.rdv-avatar-user {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.rdv-profile h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.rdv-profile p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.rdv-empty-related {
+  margin: 18px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Record metadata */
+.rdv-metadata-card h2 {
+  padding-bottom: 8px;
+}
+
+.rdv-detail-id {
+  color: #64748b;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* Loading and error states */
+.rdv-details-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 55vh;
+  padding: 30px;
+  text-align: center;
+}
+
+.rdv-details-message h2 {
+  margin: 14px 0 5px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.rdv-details-message p {
+  max-width: 420px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.rdv-details-error {
+  color: #b91c1c;
+}
+
+.rdv-details-message-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 50%;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.rdv-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: rdv-spin 0.8s linear infinite;
+}
+
+@keyframes rdv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rdv-alert {
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rdv-alert-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .rdv-details-page {
+    padding: 24px;
+  }
+
+  .rdv-details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rdv-details-side {
+    gap: 20px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .rdv-details-page {
+    padding: 17px 13px;
+  }
+
+  .rdv-details-header {
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .rdv-details-header h1 {
+    font-size: 25px;
+  }
+
+  .rdv-details-header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .rdv-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .rdv-details-card {
+    padding: 19px 16px;
+    border-radius: 12px;
+  }
+
+  .rdv-details-side {
+    gap: 16px;
+  }
+
+  .rdv-details-grid {
+    gap: 16px;
+  }
+
+  .rdv-card-heading h2 {
+    font-size: 15px;
+  }
+
+  .rdv-detail-value {
+    font-size: 13px;
+  }
+}

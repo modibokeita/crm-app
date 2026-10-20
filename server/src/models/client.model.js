@@ -1,7 +1,19 @@
-import moongoose from 'mongoose'
+import mongoose from 'mongoose'
+const maliRegions = [
+  "Bamako",
+  "Kayes",
+  "Koulikoro",
+  "Sikasso",
+  "Ségou",
+  "Mopti",
+  "Tombouctou",
+  "Gao",
+  "Kidal",
+  "Ménaka",
+  "Taoudénit",
+];
 
-
-const clientSchema = new moongoose.Schema({
+const clientSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, "Name is required"],
@@ -31,14 +43,48 @@ const clientSchema = new moongoose.Schema({
         trim: true,
         maxlength: 200,     
     },
+    region: {
+      type: String,
+      required: [true, "Region is required"],
+      enum: {
+        values: maliRegions,
+        message: "Please select a valid region in Mali",
+      },
+    },
     companyName: {
         type: String,
         trim: true,
         maxlength: 100,
-    }
+    },
+    // Commercial representative assigned to this client.
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Commercial representative is required"],
+    },
 
+    objections: {
+      type: String,
+      enum: ["interesse", "pasinteresse", "logicieldispo"],
+      default: "interesse",
+    },
+
+    produits: {
+      type: String,
+      enum: ["gclinic", "gboutique", "csdss"],
+      default: "gclinic",
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
+},
+{
+    timestamps: true,
 })
 
-const Client = moongoose.model("Client", clientSchema);
+const Client = mongoose.model("Client", clientSchema);
 
 export default Client;

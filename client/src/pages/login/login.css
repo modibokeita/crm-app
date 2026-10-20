@@ -1,0 +1,88 @@
+/* Login component styles */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    /* height: auto; */
+    background: #2B3337;
+    color: #fff;
+    max-width: 800px;
+    margin: 8em auto;
+    padding: 3em;
+    border-left: .7em solid #FF01FF;
+    border-radius: 8px;
+}
+
+.message a {
+    color: #FF01FF;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 400px;
+    gap: .5em;
+    font-size: 1.5em;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    padding: 1em;
+    margin: 1em 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    border-bottom: 1px solid #506671;
+    color: black;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border: 2px solid #FF01FF;
+    outline: none;
+}
+
+button {
+    padding: 10px;
+    background-color: #FF01FF;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background-color: #530253;
+}
+
+.form-container h1 {
+    color: #FF01FF;
+    font-weight: bold;
+    font-size: 2rem;
+}
+#formMail, #formPass{
+    color: white;
+    font-size: 2rem;
+}
+/* 
+@media (max-width: 900px){
+    .form-container{
+        max-width: 500px;
+        height: auto;
+    }
+}
+@media (min-width: 1600px){
+        .form-container{
+        max-width: 800px;
+        height: auto;
+        color: white;
+    }
+} */

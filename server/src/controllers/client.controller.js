@@ -15,6 +15,15 @@ const getClient = async (req, res) => {
         });
     } 
 }
+const getClientsCount = async (req, res) => {
+    try {
+        const count = await Client.countDocuments();
+        res.status(200).json({totalClients: count})
+    } catch (error) {
+        console.error("Get clients count error", error)
+        res.status(500).json({message: "failed to count clients"})
+    }
+}
 const getClientById = async (req, res) => {
     const { id } = req.params;
       if (!mongoose.isObjectIdOrHexString(id)) {
@@ -44,7 +53,7 @@ const getClientById = async (req, res) => {
 };
 
 const createClient = async (req, res) => {
-    const { name, email, phone, address, companyName } = req.body ?? {};
+    const { name, email, phone, address, region, companyName, user,objections, produits, notes } = req.body ?? {};
 
     if (
         typeof name !== "string" ||
@@ -65,7 +74,12 @@ const createClient = async (req, res) => {
             email: email.trim().toLowerCase(),
             phone: phone.trim(),
             address: address?.trim() || "",
+            region: region?.trim() || "",
             companyName: companyName?.trim() || "",
+            user: user?.trim() || "",
+            objections: objections?.trim() || "",
+            produits: produits?.trim() || "",
+            notes: notes?.trim() || "",
         });
 
         await newClient.save();
@@ -84,7 +98,7 @@ const createClient = async (req, res) => {
 
 const updateClient = async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, address, companyName } = req.body ?? {};
+    const { name, email, phone, address, companyName, notes } = req.body ?? {};
       if (!mongoose.isObjectIdOrHexString(id)) {
           return res.status(400).json({
             message: "Invalid client ID",
@@ -111,9 +125,16 @@ const updateClient = async (req, res) => {
                 email: email.trim().toLowerCase(),
                 phone: phone.trim(),
                 address: address?.trim() || "",
+                region: region?.trim() || "",
                 companyName: companyName?.trim() || "",
+                user: user?.trim() || "",
+                objections: objections?.trim() || "",
+                produits: produits?.trim() || "",
+                notes: notes?.trim() || "",
             },
-            { new: true }
+            {   returnDocument: "after",
+                runValidators: true, 
+            }
         );
 
         if (!updatedClient) {
@@ -162,5 +183,5 @@ const deleteClient = async (req, res) => {
     }
 };
 
-export { getClient, createClient, updateClient, deleteClient, getClientById };
+export { getClient, createClient, updateClient, deleteClient, getClientById, getClientsCount };
 

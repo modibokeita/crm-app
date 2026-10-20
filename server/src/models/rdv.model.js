@@ -30,13 +30,6 @@ const appointmentSchema = new mongoose.Schema(
       required: [true, "Appointment date is required"],
     },
 
-    duration: {
-      type: Number,
-      default: 30,
-      min: [5, "Duration must be at least 5 minutes"],
-      max: [480, "Duration cannot exceed 480 minutes"],
-    },
-
     status: {
       type: String,
       enum: ["scheduled", "confirmed", "completed", "cancelled"],
@@ -47,12 +40,6 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 200,
-    },
-
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: 2000,
     },
   },
   {
