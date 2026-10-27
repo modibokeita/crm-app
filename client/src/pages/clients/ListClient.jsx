@@ -1,5 +1,5 @@
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./clients.css";
 
@@ -16,6 +16,8 @@ const emptyForm = {
 };
 
 const initialRdvForm = {
+  user:"",
+  client: "",
   title: "",
   date: "",
   status: "scheduled",
@@ -30,8 +32,33 @@ function getStoredUser() {
   }
 }
 
+function getUserId(user) {
+  return String(user?._id || user?.id || "");
+}
+
+function getClientOwnerId(client) {
+  const owner = client?.user;
+
+  if (owner && typeof owner === "object") {
+    return String(owner._id || owner.id || "");
+  }
+
+  return String(owner || "");
+}
+
+async function readResponse(response) {
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "The request failed.");
+  }
+
+  return data;
+}
+
 function ListClient() {
   const [clients, setClients] = useState([]);
+  const [currentUser, setCurrentUser] = useState(getStoredUser);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,46 +67,70 @@ function ListClient() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(emptyForm);
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingImageFile, setEditingImageFile] = useState(null);
 
-  // RDV modal state
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [rdvForm, setRdvForm] = useState(initialRdvForm);
   const [rdvLoading, setRdvLoading] = useState(false);
   const [rdvError, setRdvError] = useState("");
-  const [currentUser] = useState(getStoredUser);
 
-  // Fetch clients from the backend
-  async function fetchClients() {
+  const currentUserId = getUserId(currentUser);
+
+  const fetchClients = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      setError("");
+      const response = await fetch(API_URL, {
+        method: "GET",
+        credentials: "include",
+      });
 
-      const response = await fetch(API_URL);
-      const data = await response.json().catch(() => ({}));
+      const data = await readResponse(response);
+      const list = Array.isArray(data)
+        ? data
+        : data.clients || [];
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to load clients.");
-      }
-
-      setClients(
-        Array.isArray(data) ? data : data.clients ?? []
-      );
+      // Do not filter by owner: every connected user sees all clients.
+      setClients(list);
     } catch (err) {
       setError(err.message || "Failed to load clients.");
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    fetchClients();
   }, []);
 
-  // Open the client edit form
+  useEffect(() => {
+    setCurrentUser(getStoredUser());
+    fetchClients();
+  }, [fetchClients]);
+
+  // Re-read the display user if localStorage changes in another tab.
+  useEffect(() => {
+    function syncUser() {
+      setCurrentUser(getStoredUser());
+    }
+
+    window.addEventListener("storage", syncUser);
+
+    return () => window.removeEventListener("storage", syncUser);
+  }, []);
+
+  const isOwner = (client) =>
+    Boolean(currentUserId) &&
+    getClientOwnerId(client) === currentUserId;
+
   function handleEdit(client) {
+    if (!isOwner(client)) {
+      setError("You can only edit clients you own.");
+      return;
+    }
+
     setError("");
     setMessage("");
     setEditingId(client._id);
+    setEditingImageFile(null);
 
     setEditForm({
       name: client.name || "",
@@ -91,53 +142,56 @@ function ListClient() {
     });
   }
 
-  function handleEditChange(e) {
-    const { name, value } = e.target;
+  function handleEditChange(event) {
+    const { name, value } = event.target;
 
-    setEditForm((prev) => ({
-      ...prev,
+    setEditForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
   }
 
-  // Update a client
-  async function handleUpdate(e) {
-    e.preventDefault();
+  async function handleUpdate(event) {
+    event.preventDefault();
 
     if (!editingId || actionLoading) return;
+
+    const client = clients.find((item) => item._id === editingId);
+
+    if (!client || !isOwner(client)) {
+      setError("You cannot edit a client owned by another user.");
+      setEditingId(null);
+      return;
+    }
 
     setError("");
     setMessage("");
     setActionLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/${editingId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editForm),
+      const payload = new FormData();
+
+      Object.entries(editForm).forEach(([key, value]) => {
+        payload.append(key, value);
       });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update client.");
+      if (editingImageFile) {
+        payload.append("image", editingImageFile);
       }
 
-      const returnedClient = data.client ?? data;
+      const response = await fetch(`${API_URL}/${editingId}`, {
+        method: "PUT",
+        credentials: "include",
+        body: payload,
+      });
 
-      const updatedClient = {
-        ...editForm,
-        ...returnedClient,
-        _id: editingId,
-      };
+      const data = await readResponse(response);
 
-      setClients((prev) =>
-        prev.map((client) =>
-          client._id === editingId
-            ? { ...client, ...updatedClient }
-            : client
+      setClients((previous) =>
+        previous.map((item) =>
+          item._id === editingId
+            ? data.client
+            : item
         )
       );
 
@@ -156,12 +210,17 @@ function ListClient() {
     setEditForm(emptyForm);
     setError("");
     setMessage("");
+    setEditingImageFile(null);
   }
 
-  // Delete a client
   async function handleDelete(client) {
+    if (!isOwner(client)) {
+      setError("You cannot delete a client owned by another user.");
+      return;
+    }
+
     const confirmed = window.confirm(
-      `Êtes-vous sûr de vouloir supprimer ${client.name}? Cette action ne peut pas être annulée.`
+      `Êtes-vous sûr de vouloir supprimer ${client.name} ? Cette action ne peut pas être annulée.`
     );
 
     if (!confirmed || actionLoading) return;
@@ -173,16 +232,13 @@ function ListClient() {
     try {
       const response = await fetch(`${API_URL}/${client._id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
-      const data = await response.json().catch(() => ({}));
+      await readResponse(response);
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to delete client.");
-      }
-
-      setClients((prev) =>
-        prev.filter((item) => item._id !== client._id)
+      setClients((previous) =>
+        previous.filter((item) => item._id !== client._id)
       );
 
       if (editingId === client._id) {
@@ -198,7 +254,6 @@ function ListClient() {
     }
   }
 
-  // Open the RDV modal for the selected client
   function openRdvModal(client) {
     setSelectedClient(client);
     setRdvForm(initialRdvForm);
@@ -208,7 +263,6 @@ function ListClient() {
     setShowRdvModal(true);
   }
 
-  // Close the RDV modal
   function closeRdvModal() {
     if (rdvLoading) return;
 
@@ -218,35 +272,30 @@ function ListClient() {
     setRdvError("");
   }
 
-  // Update RDV form fields
-  function handleRdvChange(e) {
-    const { name, value } = e.target;
+  function handleRdvChange(event) {
+    const { name, value } = event.target;
 
-    setRdvForm((prev) => ({
-      ...prev,
+    setRdvForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
   }
 
-  // Create an appointment associated with the selected client and user
-  async function handleCreateRdv(e) {
-    e.preventDefault();
+  async function handleCreateRdv(event) {
+    event.preventDefault();
     setRdvError("");
 
-    const userId = currentUser?._id || currentUser?.id;
-    const clientId = selectedClient?._id;
-
-    if (!userId) {
-      setRdvError("User ID not found. Please log in again.");
+    if (!currentUserId) {
+      setRdvError("User not found. Please log in again.");
       return;
     }
 
-    if (!clientId) {
+    if (!selectedClient?._id) {
       setRdvError("Please select a valid client.");
       return;
     }
 
-    if (!rdvForm.title.trim() || rdvForm.title.trim().length < 2) {
+    if (rdvForm.title.trim().length < 2) {
       setRdvError("The appointment title must contain at least 2 characters.");
       return;
     }
@@ -267,13 +316,11 @@ function ListClient() {
     try {
       const response = await fetch(RDV_API, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user: userId,
-          client: clientId,
+          user: currentUserId,
+          client: selectedClient._id,
           title: rdvForm.title.trim(),
           date: appointmentDate.toISOString(),
           status: rdvForm.status,
@@ -283,11 +330,12 @@ function ListClient() {
 
       const data = await response.json().catch(() => ({}));
 
+      console.log("Create RDV status:", response.status);
+      console.log("Create RDV response:", data);
+
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to create the appointment."
-        );
-      }
+        throw new Error(data.message || "Failed to create appointment.");
+      };
 
       setMessage(
         `Rendez-vous créé avec succès pour ${selectedClient.name}.`
@@ -296,22 +344,19 @@ function ListClient() {
       setShowRdvModal(false);
       setSelectedClient(null);
       setRdvForm(initialRdvForm);
-      setRdvError("");
     } catch (err) {
-      setRdvError(err.message || "Something went wrong.");
+      setRdvError(err.message || "Failed to create appointment.");
     } finally {
       setRdvLoading(false);
     }
   }
 
-  // Minimum date/time for the datetime-local input
   const minRdvDateTime = new Date(
     Date.now() - new Date().getTimezoneOffset() * 60000
   )
     .toISOString()
     .slice(0, 16);
 
-  // Search clients by name, email, or phone
   const query = search.trim().toLowerCase();
 
   const filteredClients = clients.filter((client) =>
@@ -327,10 +372,7 @@ function ListClient() {
   if (error && clients.length === 0) {
     return (
       <div>
-        <p className="clients-error" role="alert">
-          {error}
-        </p>
-
+        <p className="clients-error" role="alert">{error}</p>
         <button type="button" onClick={fetchClients}>
           Try again
         </button>
@@ -343,7 +385,7 @@ function ListClient() {
       <div className="clients-header">
         <div>
           <h2>Clients</h2>
-          <p>Gérez et consultez tous vos clients.</p>
+          <p>Consultez tous les clients et gérez ceux que vous possédez.</p>
         </div>
 
         <span className="clients-count">
@@ -354,27 +396,22 @@ function ListClient() {
       <div className="clients-toolbar">
         <div className="clients-search">
           <span aria-hidden="true">⌕</span>
-
           <input
             type="search"
             placeholder="Search by name, email, or phone..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
             aria-label="Search clients"
           />
         </div>
       </div>
 
       {error && (
-        <p className="clients-error" role="alert">
-          {error}
-        </p>
+        <p className="clients-error" role="alert">{error}</p>
       )}
 
       {message && (
-        <p className="clients-success" role="status">
-          {message}
-        </p>
+        <p className="clients-success" role="status">{message}</p>
       )}
 
       <div className="clients-table-wrapper">
@@ -383,6 +420,7 @@ function ListClient() {
             <tr>
               <th>Client</th>
               <th>Phone</th>
+              <th>Commercial</th>
               <th>Date de création</th>
               <th>Actions</th>
             </tr>
@@ -394,7 +432,7 @@ function ListClient() {
                 <Fragment key={client._id}>
                   {editingId === client._id ? (
                     <tr className="client-edit-row">
-                      <td colSpan={4}>
+                      <td colSpan={5}>
                         <form
                           className="client-edit-form"
                           onSubmit={handleUpdate}
@@ -439,7 +477,7 @@ function ListClient() {
                             </label>
 
                             <label>
-                              Addresse
+                              Adresse
                               <input
                                 name="address"
                                 value={editForm.address}
@@ -449,7 +487,7 @@ function ListClient() {
                             </label>
 
                             <label>
-                             Nom de l'entreprise
+                              Nom de l'entreprise
                               <input
                                 name="companyName"
                                 value={editForm.companyName}
@@ -457,7 +495,51 @@ function ListClient() {
                                 maxLength={100}
                               />
                             </label>
+                            <label className="client-edit-full">
+                              Photo / logo de l'entreprise
 
+                              <input
+                                type="file"
+                                name="image"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+
+                                  if (!file) {
+                                    setEditingImageFile(null);
+                                    return;
+                                  }
+
+                                  const allowedTypes = [
+                                    "image/jpeg",
+                                    "image/png",
+                                    "image/webp",
+                                    "image/gif",
+                                  ];
+
+                                  if (!allowedTypes.includes(file.type)) {
+                                    setError("Choose a JPG, PNG, WEBP, or GIF image.");
+                                    event.target.value = "";
+                                    setEditingImageFile(null);
+                                    return;
+                                  }
+
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    setError("The image must be smaller than 5 MB.");
+                                    event.target.value = "";
+                                    setEditingImageFile(null);
+                                    return;
+                                  }
+
+                                  setError("");
+                                  setEditingImageFile(file);
+                                }}
+                              />
+
+                              {editingImageFile && (
+                                <small>New image: {editingImageFile.name}</small>
+                              )}
+                            </label>
                             <label className="client-edit-full">
                               Notes
                               <textarea
@@ -476,9 +558,7 @@ function ListClient() {
                               className="client-action-btn client-action-save"
                               disabled={actionLoading}
                             >
-                              {actionLoading
-                                ? "Saving..."
-                                : "Save changes"}
+                              {actionLoading ? "Saving..." : "Save changes"}
                             </button>
 
                             <button
@@ -525,41 +605,57 @@ function ListClient() {
                       <td>{client.phone || "—"}</td>
 
                       <td>
+                        {client.user?.name ||
+                          (isOwner(client) ? currentUser?.name : null) ||
+                          "Unknown"}
+                      </td>
+
+                      <td>
                         {client.createdAt
-                          ? new Date(
-                              client.createdAt
-                            ).toLocaleDateString()
+                          ? new Date(client.createdAt).toLocaleDateString()
                           : "—"}
                       </td>
 
                       <td>
                         <div className="client-actions">
-                          <button
-                            type="button"
-                            className="client-action-btn client-action-edit"
-                            disabled={actionLoading || rdvLoading}
-                            onClick={() => handleEdit(client)}
+                          <Link
+                            to={`/dashboard/clients/${client._id}`}
+                            className="client-action-btn"
                           >
-                            Edit
-                          </button>
+                            Details
+                          </Link>
 
-                          <button
-                            type="button"
-                            className="client-action-btn client-action-rdv"
-                            disabled={actionLoading || rdvLoading}
-                            onClick={() => openRdvModal(client)}
-                          >
-                            + Créer RDV
-                          </button>
+                          {isOwner(client) && (
+                            <>
+                              <button
+                                type="button"
+                                className="client-action-btn client-action-edit"
+                                disabled={actionLoading || rdvLoading}
+                                onClick={() => handleEdit(client)}
+                              >
+                                Edit
+                              </button>
 
-                          <button
-                            type="button"
-                            className="client-action-btn client-action-delete"
-                            disabled={actionLoading || rdvLoading}
-                            onClick={() => handleDelete(client)}
-                          >
-                            Supprimer
-                          </button>
+                              <button
+                                type="button"
+                                className="client-action-btn client-action-delete"
+                                disabled={actionLoading || rdvLoading}
+                                onClick={() => handleDelete(client)}
+                              >
+                                Supprimer
+                              </button>
+                              <button
+                                type="button"
+                                className="client-action-btn client-action-rdv"
+                                disabled={actionLoading || rdvLoading}
+                                onClick={() => openRdvModal(client)}
+                              >
+                                + Créer RDV
+                              </button>
+                            </>
+                          )}
+
+
                         </div>
                       </td>
                     </tr>
@@ -568,10 +664,10 @@ function ListClient() {
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="clients-empty">
-                  {search
+                <td colSpan={5} className="clients-empty">
+                  {query
                     ? "No clients match your search."
-                    : "No clients found. Add your first client."}
+                    : "No clients found."}
                 </td>
               </tr>
             )}
@@ -583,13 +679,12 @@ function ListClient() {
         Showing {filteredClients.length} of {clients.length} clients
       </div>
 
-      {/* Create RDV modal */}
       {showRdvModal && selectedClient && (
         <div
           className="rdv-modal-overlay"
-          onMouseDown={(e) => {
+          onMouseDown={(event) => {
             if (
-              e.target === e.currentTarget &&
+              event.target === event.currentTarget &&
               !rdvLoading
             ) {
               closeRdvModal();
@@ -604,22 +699,12 @@ function ListClient() {
           >
             <div className="rdv-modal-header">
               <div>
-                <h2 id="create-client-rdv-title">
-                  Créer RDV
-                </h2>
-
+                <h2 id="create-client-rdv-title">Créer RDV</h2>
                 <p>
-                  Client:{" "}
-                  <strong>
-                    {selectedClient.name || "Unnamed client"}
-                  </strong>
+                  Client: <strong>{selectedClient.name}</strong>
                 </p>
-
                 <p>
-                  commercial:{" "}
-                  <strong>
-                    {currentUser?.name || "User not found"}
-                  </strong>
+                  Commercial: <strong>{currentUser?.name || "User"}</strong>
                 </p>
               </div>
 
@@ -637,22 +722,18 @@ function ListClient() {
             <form onSubmit={handleCreateRdv}>
               <div className="rdv-modal-body">
                 {rdvError && (
-                  <p className="clients-error" role="alert">
-                    {rdvError}
-                  </p>
+                  <p className="clients-error" role="alert">{rdvError}</p>
                 )}
 
                 <div className="form-group">
                   <label htmlFor="client-rdv-title">
                     Titre du rendez-vous*
                   </label>
-
                   <input
                     id="client-rdv-title"
                     name="title"
                     value={rdvForm.title}
                     onChange={handleRdvChange}
-                    placeholder="e.g. G-Clinic product presentation"
                     minLength={2}
                     maxLength={150}
                     required
@@ -660,10 +741,7 @@ function ListClient() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="client-rdv-date">
-                    Date et heure *
-                  </label>
-
+                  <label htmlFor="client-rdv-date">Date et heure *</label>
                   <input
                     id="client-rdv-date"
                     name="date"
@@ -676,35 +754,29 @@ function ListClient() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="client-rdv-status">
-                    Status
-                  </label>
-
+                  <label htmlFor="client-rdv-status">Status</label>
                   <select
                     id="client-rdv-status"
                     name="status"
                     value={rdvForm.status}
                     onChange={handleRdvChange}
                   >
-                    <option value="scheduled">programmé</option>
+                    <option value="scheduled">Programmé</option>
                     <option value="confirmed">Confirmé</option>
-                    <option value="completed">complété</option>
-                    <option value="cancelled">annulé</option>
+                    <option value="completed">Terminé</option>
+                    <option value="cancelled">Annulé</option>
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="client-rdv-location">
-                    Emplacement
-                  </label>
-
+                  <label htmlFor="client-rdv-location">Emplacement</label>
                   <input
                     id="client-rdv-location"
                     name="location"
                     value={rdvForm.location}
                     onChange={handleRdvChange}
                     maxLength={200}
-                    placeholder="e.g. Client's office"
+                    placeholder="Bureau du client"
                   />
                 </div>
               </div>
@@ -722,14 +794,9 @@ function ListClient() {
                 <button
                   type="submit"
                   className="client-action-btn client-action-save"
-                  disabled={
-                    rdvLoading ||
-                    (!currentUser?._id && !currentUser?.id)
-                  }
+                  disabled={rdvLoading || !currentUserId}
                 >
-                  {rdvLoading
-                    ? "Creating..."
-                    : "Créer RDV"}
+                  {rdvLoading ? "Creating..." : "Créer RDV"}
                 </button>
               </div>
             </form>

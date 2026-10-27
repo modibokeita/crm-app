@@ -11,17 +11,27 @@ const [looading, setLoading] = useState(true)
 useEffect(() => {
      const storedUser = localStorage.getItem("user")
 
-     if (setUser){
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (error) {
-        localStorage.removeItem("user")
-      }
-     }
+     if (storedUser) {
+  try {
+    setUser(JSON.parse(storedUser));
+  } catch {
+    localStorage.removeItem("user");
+    setUser(null);
+  }
+}
+  if (error) {
+  return <p>{error.message}</p>;
+}
      const getClientCount = async () => {
       try {
         
-          const res = await fetch("http://localhost:3000/api/clients/count")
+          const res = await fetch(
+            "http://localhost:3000/api/clients/count",
+            {
+              method: "GET",
+              credentials: "include",
+            }
+          );
           if (!res.ok){
             throw Error("failed to fetch clients")
           }
@@ -41,7 +51,12 @@ useEffect(() => {
          const getRdvCount = async () => {
       try {
         
-          const res = await fetch("http://localhost:3000/api/rdv/count")
+          const res = await fetch("http://localhost:3000/api/rdv/count",
+            {
+              method: "GET",
+              credentials: "include",
+            }
+          )
           if (!res.ok){
             throw Error("failed to fetch rdv")
           }

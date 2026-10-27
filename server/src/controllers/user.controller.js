@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
+
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body ?? {};
@@ -12,40 +14,60 @@ const loginUser = async (req, res) => {
     !password
   ) {
     return res.status(400).json({
-      message: "Email and password are required",
+      message: "Email and password are required.",
+    });
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is not configured.");
+
+    return res.status(500).json({
+      message: "Server authentication is not configured.",
     });
   }
 
   try {
+    // Password is select:false in the User model, so explicitly include it.
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     }).select("+password");
 
-    // Use the same message for both cases to avoid
-    // revealing whether an account exists.
+    // Use the same response for an unknown email and a wrong password.
     if (!user) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message: "Invalid email or password.",
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(
+    const passwordIsValid = await bcrypt.compare(
       password,
       user.password
     );
 
-    if (!isPasswordValid) {
+    if (!passwordIsValid) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message: "Invalid email or password.",
       });
     }
 
-    // Credentials are verified, but a persistent
-    // authenticated session is not created yet.
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 24 * 60 * 60 * 1000,
+  path: "/",
+});
+
     return res.status(200).json({
-      message: "Login successful",
+      message: "Login successful.",
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
       },
@@ -54,10 +76,11 @@ const loginUser = async (req, res) => {
     console.error("Login error:", error);
 
     return res.status(500).json({
-      message: "An internal server error occurred",
+      message: "An internal server error occurred.",
     });
   }
 };
+
 
 const registerUser = async (req, res) => {
   const { name, email, password } = req.body ?? {};

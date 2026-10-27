@@ -33,7 +33,7 @@ const getAppointmentsCount = async (req, res) => {
   }
 }
 const createAppointment = async (req, res) => {
-  const { user, client, title, date, status, location } = req.body ?? {};
+  const {user, client, title, date, status, location } = req.body;
 
   if (!user || !client || !title || !date) {
     return res.status(400).json({
@@ -42,14 +42,14 @@ const createAppointment = async (req, res) => {
   }
 
   try {
-    const newAppointment = new Appointment({
-      user,
-      client,
-      title,
-      date,
-      status,
-      location,
-    });
+  const newAppointment = await Appointment.create({
+    user,
+    client,
+    title: title.trim(),
+    date: new Date(date),
+    status: status || "scheduled",
+    location: location?.trim() || "",
+  })
 
     const savedAppointment = await newAppointment.save();
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Header from "../../components/Header"
 import "./details.css";
-
+import companyImage from "../../assets/company.png"
 const API_URL = "http://localhost:3000/api/clients";
 
 const emptyForm = {
@@ -11,7 +11,12 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
+  region: "",
   companyName: "",
+  user: "",
+  objections: "",
+  produits: "",
+  image: "",
   notes: "",
 };
 
@@ -32,7 +37,12 @@ function DetailsClient() {
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/${id}`);
+      const response = await fetch(`${API_URL}/${id}`, 
+          {
+              method: "GET",
+              credentials: "include",
+            }
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -100,6 +110,7 @@ function DetailsClient() {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -151,6 +162,7 @@ function DetailsClient() {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       const data = await response.json().catch(() => ({}));
@@ -205,26 +217,6 @@ function DetailsClient() {
         <Link to="/dashboard/clients" className="details-back-link">
           <span aria-hidden="true">←</span> Back to clients 
         </Link>
-
-        {!editing && (
-          <div className="details-top-actions">
-            <button
-              type="button"
-              className="details-btn details-btn-primary"
-              onClick={handleStartEdit}
-            >
-              Edit client
-            </button>
-
-            <button
-              type="button"
-              className="details-btn details-btn-danger"
-              onClick={handleDelete}
-            >
-              Delete client
-            </button>
-          </div>
-        )}
       </div>
 
         <Header />
@@ -352,8 +344,45 @@ function DetailsClient() {
                 Client
               </span>
             </div>
-          </section>
+            <div className="details-avatar">
+              {(client.user.name || "?").trim().charAt(0).toUpperCase()}
+            </div>
 
+            <div className="details-profile-info">
+              <h2>{client.user.name || "Unnamed user"}</h2>
+              <p>{client.user.email || "No email provided"}</p>
+
+              <span className="details-profile-badge">
+                Responsable Commercial
+              </span>
+            </div>
+          </section>
+          <div className="details-profile-card ">
+            <div className="company-image-container">
+
+            <h2 className="eName">{client.companyName || client.name}</h2>
+            {client.image ? (
+              <img
+                className="company-image"
+                src={`http://localhost:3000${client.image}`}
+                alt={`${client.companyName || client.name} logo`}
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <img
+                className="company-image"
+                src={companyImage}
+                alt={`${client.companyName || client.name} logo`}
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+            )}
+            </div>
+            
+          </div>
           <section className="details-card">
             <div className="details-card-heading">
               <h2>Contact information</h2>
@@ -370,7 +399,7 @@ function DetailsClient() {
                 <span>Email address</span>
                 <strong>{client.email || "—"}</strong>
               </div>
-
+              
               <div className="details-info-item">
                 <span>Phone number</span>
                 <strong>{client.phone || "—"}</strong>
@@ -380,10 +409,30 @@ function DetailsClient() {
                 <span>Company name</span>
                 <strong>{client.companyName || "—"}</strong>
               </div>
-
-              <div className="details-info-item details-info-full">
+              <div className="details-info-item ">
+                <span>Region</span>
+                <strong>{client.region || "No region provided"}</strong>
+              </div>
+              <div className="details-info-item ">
                 <span>Address</span>
                 <strong>{client.address || "No address provided"}</strong>
+              </div>
+
+              <div className="details-info-item">
+                <span>Produit proposé</span>
+                <strong>{
+                client.produits === "gboutique" 
+                ? "G-Boutique" : client.produits === "gclinic" 
+                ? "G-Clinique" : "No product provided"}</strong>
+              </div>
+              <div className="details-info-item details-info-full">
+                <span>Objection</span>
+                <strong>{
+                client.objections === "montanteleve" 
+                ? "Montant élevé" : client.objections === "interesse" 
+                ? "Interessé" : client.objections === "pasinteresse" 
+                ? "Pas interessé": client.objections === "logicieldispo" 
+                ? "Logiciel déjà disponible" : "No objection provided"}</strong>
               </div>
             </div>
           </section>

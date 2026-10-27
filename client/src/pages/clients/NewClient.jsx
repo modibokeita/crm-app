@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./newClient.css";
 
-const CLIENTS_API = "http://localhost:3000/api/clients/newClient";
+const CLIENTS_API = "http://localhost:3000/api/clients";
 const RDV_API = "http://localhost:3000/api/rdv/newRdv";
 
 const initialForm = {
@@ -22,7 +22,7 @@ const initialForm = {
 const initialRdv = {
   title: "",
   date: "",
-  status: "Programmé",
+  status: "scheduled",
   location: "",
 };
 
@@ -60,7 +60,7 @@ function NewClient() {
   const [rdvData, setRdvData] = useState(initialRdv);
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [rdvAdded, setRdvAdded] = useState(false);
-
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -124,31 +124,36 @@ function NewClient() {
     setLoading(true);
 
     try {
-      // Step 1: Create the client.
-      const clientResponse = await fetch(CLIENTS_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
+     // Step 1: Create the client with its optional company image.
+          const clientPayload = new FormData();
 
-      const clientResult = await clientResponse.json().catch(() => ({}));
+          Object.entries(formData).forEach(([key, value]) => {
+            clientPayload.append(key, value);
+          });
 
-      if (!clientResponse.ok) {
-        throw new Error(
-          clientResult.message || "Failed to create client."
-        );
-      }
+          if (imageFile) {
+            clientPayload.append("image", imageFile);
+          }
 
-      const clientId =
-        clientResult.client?._id ||
-        clientResult._id;
+          const clientResponse = await fetch(CLIENTS_API, {
+            method: "POST",
+            credentials: "include",
+            body: clientPayload,
+          });
 
-      if (!clientId) {
-        throw new Error(
-          "The client was created, but the API did not return its ID. Check your client controller response."
-        );
-      }
+          const clientResult = await clientResponse.json().catch(() => ({}));
+
+          if (!clientResponse.ok) {
+            throw new Error(clientResult.message || "Failed to create client.");
+          }
+
+          const clientId = clientResult.client?._id || clientResult._id;
+
+          if (!clientId) {
+            throw new Error(
+              "Client created, but the API did not return its ID."
+            );
+          }
 
       // Step 2: Create an RDV only if the user added one.
       if (rdvAdded) {
@@ -189,7 +194,38 @@ function NewClient() {
       setLoading(false);
     }
   }
+  function handleImageChange(event) {
+  const file = event.target.files?.[0];
 
+  if (!file) {
+    setImageFile(null);
+    return;
+  }
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    setError("Choose a JPG, PNG, WEBP, or GIF image.");
+    event.target.value = "";
+    setImageFile(null);
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    setError("The image must be smaller than 5 MB.");
+    event.target.value = "";
+    setImageFile(null);
+    return;
+  }
+
+  setError("");
+  setImageFile(file);
+}
   return (
     <main className="content-dash new-client-page">
       <form className="new-client-form" onSubmit={handleSubmit}>
@@ -267,7 +303,21 @@ function NewClient() {
               autoComplete="organization"
             />
           </div>
+          <div className="form-group form-group-full">
+            <label htmlFor="image">Photo / logo de l'entreprise</label>
 
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageChange}
+            />
+
+            {imageFile && (
+              <small>Image sélectionnée : {imageFile.name}</small>
+            )}
+          </div>
           <div className="form-group">
             <label htmlFor="region">Région  <span>*</span></label>
             <select
@@ -324,6 +374,7 @@ function NewClient() {
             >
               <option value="interesse">Intéressé</option>
               <option value="pasinteresse">Pas intéressé</option>
+              <option value="montanteleve">Montant élevé</option>
               <option value="logicieldispo">
                 Logiciel déjà disponible
               </option>

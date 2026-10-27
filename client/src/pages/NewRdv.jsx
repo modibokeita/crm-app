@@ -123,16 +123,7 @@ function NewRdv() {
       return;
     }
 
-    const duration = Number(formData.duration);
 
-    if (
-      !Number.isInteger(duration) ||
-      duration < 5 ||
-      duration > 480
-    ) {
-      setError("Duration must be between 5 and 480 minutes.");
-      return;
-    }
 
     const payload = {
       user: formData.user,
